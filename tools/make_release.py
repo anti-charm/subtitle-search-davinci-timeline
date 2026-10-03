@@ -11,7 +11,7 @@ from functools import lru_cache
 from pathlib import Path
 from zipfile import ZIP_DEFLATED, ZipFile, ZipInfo
 
-VERSION = "0.2.0"
+VERSION = "0.2.1"
 ROOT = Path(__file__).resolve().parents[1]
 PUBLIC_FILES = (
     ".gitattributes",
@@ -44,6 +44,7 @@ PUBLIC_FILES = (
     "src/subdav/srt.py",
     "src/subdav/store.py",
     "src/subdav/style.py",
+    "src/subdav/title_preview.py",
     "src/subdav/workflow.py",
     "tests/test_app.py",
     "tests/test_distribution.py",
@@ -53,6 +54,7 @@ PUBLIC_FILES = (
     "tests/test_srt.py",
     "tests/test_store.py",
     "tests/test_style.py",
+    "tests/test_title_preview.py",
     "tests/test_workflow.py",
     "tests/test_security.py",
     "tests/test_release.py",

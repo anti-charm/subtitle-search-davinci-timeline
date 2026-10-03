@@ -39,7 +39,7 @@ class TitleStyle:
     font_face: str = "Regular"
     font_color: str = "#FFFFFF"
     stroke_color: str = "#000000"
-    stroke_width: float = 0.08
+    stroke_width: float = 1.0
     alignment: str = "center"
     # Fractions of the frame from centre. Negative Y means lower on screen.
     position_y_fraction: float = -0.36
@@ -83,6 +83,8 @@ class TitleStyle:
             "font": self.font,
             "fontSize": str(self.font_size),
             "fontFace": self.font_face,
+            "bold": "1" if "Bold" in self.font_face else "0",
+            "italic": "1" if "Italic" in self.font_face else "0",
             "fontColor": to_fcp_color(self.font_color),
             "alignment": self.alignment,
         }
