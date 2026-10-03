@@ -30,6 +30,7 @@ def isolated_gui_test(case):
             timeout=60,
             check=False,
         )
-        assert result.returncode == 0, result.stdout + result.stderr
+        if result.returncode != 0:
+            raise AssertionError(result.stdout + result.stderr)
 
     return run
