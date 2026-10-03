@@ -24,3 +24,7 @@ New public files must be added deliberately to the release allowlist in
 `tools/make_release.py`. Use regression tests for security and data-loss fixes.
 Mention the Python/Resolve versions actually tested; do not infer an import test
 from well-formed XML alone. Contributions use the repository's MIT license.
+
+Windows GUI tests use `isolated_gui_test` so each scenario starts one Tcl/Tk
+interpreter in a fresh process. Child tests retain their fixtures and assertions;
+an error or timeout fails the parent check.

@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased
+
+- Run each Windows GUI test in a fresh process to isolate Tcl/Tk startup state.
+  Preserve all GUI assertions and report child-process failures to CI.
+
 ## 0.2.1 - 2026-10-03
 
 - Scale the title preview to the exported timeline frame and its aspect ratio.
