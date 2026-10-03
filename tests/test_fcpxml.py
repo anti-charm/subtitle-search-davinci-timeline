@@ -209,7 +209,7 @@ def test_export_can_add_editable_title_connected_to_each_clip(tmp_path: Path):
     assert style_def.attrib["fontFace"] == "Regular"
     assert style_def.attrib["fontColor"] == "1 1 1 1"
     assert style_def.attrib["strokeColor"] == "0 0 0 1"
-    assert style_def.attrib["strokeWidth"] == "0.08"
+    assert style_def.attrib["strokeWidth"] == "1"
 
 
 def test_export_without_titles_emits_no_title_effect_or_title_nodes(tmp_path: Path):
@@ -224,3 +224,32 @@ def test_export_without_titles_emits_no_title_effect_or_title_nodes(tmp_path: Pa
 
     assert root.find("./resources/effect") is None
     assert root.find("./library/event/project/sequence/spine/asset-clip/title") is None
+
+
+def test_mixed_media_titles_use_the_timeline_frame_for_position(tmp_path):
+    from dataclasses import replace
+
+    from subdav.style import TitleStyle
+
+    wide = tmp_path / "wide.mp4"
+    tall = tmp_path / "tall.mp4"
+    clips = [
+        TimelineClip(entry(tmp_path / "wide.srt", 1, 0, 1000, "Wide"), wide, media(wide)),
+        TimelineClip(
+            entry(tmp_path / "tall.srt", 2, 0, 1000, "Tall"),
+            tall,
+            replace(media(tall), width=1080, height=1920),
+        ),
+    ]
+    output = tmp_path / "mixed.fcpxml"
+    export_fcpxml(
+        clips,
+        output,
+        "Mixed",
+        include_titles=True,
+        title_style=TitleStyle(position_x_fraction=0.1, position_y_fraction=0.25),
+    )
+    positions = [
+        node.get("position") for node in ET.parse(output).findall(".//title/adjust-transform")
+    ]
+    assert positions == ["17.778 25", "17.778 25"]

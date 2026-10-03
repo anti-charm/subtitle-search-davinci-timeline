@@ -7,7 +7,7 @@ and assemble them into an editable DaVinci Resolve timeline. Original videos and
 subtitles stay in place. No accounts, cloud processing, telemetry, or third-party
 Python runtime packages.
 
-**[Download v0.2.0](https://github.com/anti-charm/subtitle-search-davinci-timeline/releases/tag/v0.2.0)**
+**[Download v0.2.1](https://github.com/anti-charm/subtitle-search-davinci-timeline/releases/tag/v0.2.1)**
 | [Privacy](PRIVACY.md) | [Security](SECURITY.md) | [Changelog](CHANGELOG.md)
 
 > **Sharing warning:** Exported FCPXML includes absolute media paths, filenames,
@@ -16,7 +16,7 @@ Python runtime packages.
 
 ## Start on Windows
 
-1. Download `subdav-0.2.0-source.zip` from the release and extract the whole ZIP
+1. Download `subdav-0.2.1-source.zip` from the release and extract the whole ZIP
    into a writable folder. Keep `src`, `examples`, and the launcher together.
 2. Install [Python 3.11 or newer](https://www.python.org/downloads/windows/)
    using its normal Windows installer with Tcl/Tk enabled. Ensure `py` or `python`
@@ -47,9 +47,12 @@ Never select executables from untrusted media folders.
 5. Double-click a result to include/exclude it; **Select all results** and **Clear
    results** affect the current results. A failed scan/search clears old selections.
 6. Optional: open **Title style...** to change font, size, face, text color,
-   alignment, and horizontal/vertical position. The neutral-gray preview accepts
-   editable demo text or **Use selected result**. Double-click a position slider
-   to reset only that slider. Settings and Light/Dark appearance are remembered.
+   alignment, outline, and horizontal/vertical position. The preview fits the
+   exported frame's aspect ratio, scales text/outline with the frame, and preserves
+   subtitle line breaks. It accepts multiline demo text or **Use selected result**.
+   Type in the font selector to jump to an installed font; names cannot be edited.
+   Double-click a position slider to reset only that slider. Settings and
+   Light/Dark appearance are remembered.
 7. Choose **Video/audio only** or **Video/audio + editable titles** and save XML.
 8. In DaVinci Resolve, use **File > Import > Timeline** and choose the FCPXML.
    Confirm source frame-rate/import settings, locate original media if needed,
@@ -69,15 +72,24 @@ those files available to Resolve.
 ## Titles and compatibility
 
 Default title styling uses Arial Regular, 48 pt, white text, centered at a lower
-subtitle position. Font availability and title rendering depend on your machine
-and Resolve version. Titles remain editable rather than burned into the media.
+subtitle position, with a black outline of width **1**. Width **0** disables the
+outline. Existing saved styles keep their explicit settings; **Reset to default**
+loads the new defaults. Font availability and title rendering depend on your
+machine and Resolve version. Titles remain editable rather than burned into media.
 
-**Outline/stroke controls are experimental.** The supplied development handoff
-reports that Resolve 21 did not reliably apply FCPXML Basic Title strokes, even
-though the attributes can be emitted. Do not rely on the preview outline matching
-Resolve. Verify the import in your version and adjust native titles in Resolve
-when necessary. The position preview is illustrative and can differ from final
-font metrics, wrapping, and right-to-left layout.
+Outlines were confirmed visible in user tests in Resolve 21. The preview no
+longer exaggerates them by multiplying their width. Bold/italic exports include
+both the named face and explicit FCPXML traits. Resolve may substitute unavailable
+faces; decorative families sometimes provide only a Regular face. Verify import
+using a family that includes the selected face.
+
+The frame dimensions come from the first included result, matching the exported
+sequence. If media dimensions cannot be read or nothing is included, the editor
+clearly labels its 1920 × 1080 reference frame. Changing the timeline resolution
+in Resolve can change the result. The preview is a frame-scaled estimate, not
+Resolve's renderer: font metrics, outline rasterization, alignment and
+right-to-left shaping may differ. It preserves explicit line breaks and clips
+overflow at the frame edges rather than introducing extra wrapped lines.
 
 This is a pre-1.0 tool. Automated tests verify XML structure, escaping, timings,
 and local behavior; they do not substitute for a native Resolve import test.

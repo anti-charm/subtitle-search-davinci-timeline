@@ -1,5 +1,22 @@
 # Changelog
 
+## 0.2.1 - 2026-10-03
+
+- Scale the title preview to the exported timeline frame and its aspect ratio.
+  Remove arbitrary font-size limits, desktop-DPI scaling, automatic wrapping,
+  position clamping and exaggerated outline thickness. Clip overflowing titles
+  at the frame edges, including letterboxed portrait previews.
+- Use a multiline preview-text editor and keep subtitle line breaks intact.
+- Make the font selector selection-only; typing jumps to installed font families.
+- Export explicit bold/italic traits alongside the font-face name.
+- Change the default outline width to 1; preserve existing saved styles.
+  Keep outlines following user confirmation that they import in Resolve 21.
+- Apply title transforms using timeline dimensions for mixed-resolution media.
+- Add regression checks for preview geometry, font picking and exported traits.
+
+Resolve's native renderer was not available for this update's automated checks.
+The preview is an estimate; verify typography in Resolve after import.
+
 ## 0.2.0 - 2026-10-03
 
 First public release, prepared from the supplied 0.1.6 source.

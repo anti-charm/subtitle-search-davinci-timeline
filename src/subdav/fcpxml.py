@@ -289,7 +289,11 @@ def export_fcpxml(
             ET.SubElement(
                 title,
                 "adjust-transform",
-                {"position": title_style.transform_position(clip.media.width, clip.media.height)},
+                {
+                    "position": title_style.transform_position(
+                        clips[0].media.width, clips[0].media.height
+                    )
+                },
             )
         timeline_offset += duration
 

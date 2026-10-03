@@ -13,6 +13,7 @@ from .library import VIDEO_EXTENSIONS, LibraryScan, scan_library
 from .media import MediaProbeError, find_ffprobe, launch_ffmpeg_installer, probe_media
 from .store import PairingStore
 from .style import TitleStyle
+from .title_preview import FontPicker, TitlePreview
 from .workflow import (
     ResolvedPair,
     SearchMatch,
@@ -501,7 +502,7 @@ class SubtitleDavinciApp(tk.Tk):
         dialog = tk.Toplevel(self)
         dialog.title("Editable title style")
         dialog.transient(self)
-        dialog.resizable(False, False)
+        dialog.resizable(True, True)
 
         body = ttk.Frame(dialog, padding=14)
         body.pack(fill="both", expand=True)
@@ -528,7 +529,7 @@ class SubtitleDavinciApp(tk.Tk):
 
         fonts = sorted(set(tkfont.families(self)), key=str.casefold)
         rows = [
-            ("Font", ttk.Combobox(body, textvariable=font_var, values=fonts, width=30)),
+            ("Font", FontPicker(body, textvariable=font_var, values=fonts, width=30)),
             ("Font size", ttk.Entry(body, textvariable=size_var, width=12)),
             (
                 "Face",
@@ -551,7 +552,7 @@ class SubtitleDavinciApp(tk.Tk):
                 ),
             ),
             (
-                "Outline width (experimental)",
+                "Outline width (0 = none)",
                 ttk.Entry(body, textvariable=stroke_width_var, width=12),
             ),
         ]
@@ -578,7 +579,7 @@ class SubtitleDavinciApp(tk.Tk):
         ).grid(row=color_row, column=2, padx=(6, 0))
 
         stroke_row = color_row + 1
-        ttk.Label(body, text="Outline color (experimental):").grid(
+        ttk.Label(body, text="Outline color:").grid(
             row=stroke_row, column=0, sticky="w", pady=3, padx=(0, 8)
         )
         ttk.Entry(body, textvariable=stroke_var, width=14).grid(
@@ -618,9 +619,17 @@ class SubtitleDavinciApp(tk.Tk):
         ttk.Label(body, text="Preview text:").grid(
             row=sample_row, column=0, sticky="w", pady=(10, 3), padx=(0, 8)
         )
-        ttk.Entry(body, textvariable=preview_text_var).grid(
-            row=sample_row, column=1, sticky="ew", pady=(10, 3)
-        )
+        preview_text = tk.Text(body, height=3, width=40, wrap="none", undo=True)
+        preview_text.insert("1.0", preview_text_var.get())
+        preview_text.grid(row=sample_row, column=1, sticky="ew", pady=(10, 3))
+
+        def update_sample(_event=None) -> None:
+            if preview_text.edit_modified():
+                preview_text_var.set(preview_text.get("1.0", "end-1c"))
+                preview_text.edit_modified(False)
+
+        preview_text.bind("<<Modified>>", update_sample)
+        preview_text.edit_modified(False)
 
         def use_selected_quote() -> None:
             rows = self.result_tree.selection() if hasattr(self, "result_tree") else ()
@@ -630,35 +639,43 @@ class SubtitleDavinciApp(tk.Tk):
                     index = int(rows[0])
                 except (TypeError, ValueError):
                     index = None
-            preview_text_var.set(preview_seed_text(self.matches, index))
+            quote = preview_seed_text(self.matches, index)
+            preview_text.delete("1.0", "end")
+            preview_text.insert("1.0", quote)
+            preview_text_var.set(quote)
 
         ttk.Button(body, text="Use selected result", command=use_selected_quote).grid(
             row=sample_row, column=2, padx=(6, 0), pady=(10, 3)
         )
 
         preview_row = sample_row + 1
-        ttk.Label(body, text="Live preview:").grid(
-            row=preview_row, column=0, columnspan=3, sticky="w", pady=(10, 4)
-        )
-        preview = tk.Canvas(
+        frame_width, frame_height, frame_note = self._title_preview_frame()
+        ttk.Label(
+            body, text=f"Title preview — {frame_width} × {frame_height} ({frame_note}):"
+        ).grid(row=preview_row, column=0, columnspan=3, sticky="w", pady=(10, 4))
+        preview = TitlePreview(
             body,
+            frame_width=frame_width,
+            frame_height=frame_height,
             width=560,
             height=260,
-            background="#707070",
-            highlightthickness=1,
-            highlightbackground="#A0A0A0",
-            bd=0,
         )
-        preview.grid(row=preview_row + 1, column=0, columnspan=3, sticky="ew")
+        preview.grid(row=preview_row + 1, column=0, columnspan=3, sticky="nsew")
+        body.rowconfigure(preview_row + 1, weight=1)
+        ttk.Label(
+            body,
+            text="Frame-scaled estimate. Resolve may substitute fonts or unsupported bold/italic faces.",
+            wraplength=620,
+        ).grid(row=preview_row + 2, column=0, columnspan=3, sticky="w", pady=(5, 0))
 
-        def preview_style() -> tuple[TitleStyle, int] | None:
+        def preview_style() -> TitleStyle | None:
             try:
                 size = int(size_var.get())
                 stroke_width = float(stroke_width_var.get())
                 if size <= 0 or stroke_width < 0:
                     return None
                 candidate = TitleStyle(
-                    font=font_var.get().strip() or "Arial",
+                    font=font_var.get(),
                     font_size=size,
                     font_face=face_var.get(),
                     font_color=color_var.get().strip(),
@@ -668,72 +685,19 @@ class SubtitleDavinciApp(tk.Tk):
                     position_x_fraction=float(x_var.get()),
                     position_y_fraction=float(y_var.get()),
                 )
+                if candidate.font not in fonts:
+                    return None
                 candidate.text_style_attrs()
-                return candidate, max(12, min(44, round(size * 0.58)))
+                return candidate
             except (TypeError, ValueError, tk.TclError):
                 return None
 
         def redraw_preview(*_args) -> None:
-            preview.delete("all")
-            # Always a neutral gray pseudo-video frame, independent of app theme.
-            preview.create_rectangle(0, 0, 560, 260, fill="#707070", outline="")
             parsed = preview_style()
             if parsed is None:
-                preview.create_text(
-                    280,
-                    130,
-                    text="Invalid style values",
-                    fill="#FFDDDD",
-                    font=("Arial", 13, "bold"),
-                )
+                preview.show_error("Invalid style values")
                 return
-            candidate, display_size = parsed
-            weight = "bold" if "Bold" in candidate.font_face else "normal"
-            slant = "italic" if "Italic" in candidate.font_face else "roman"
-            display_font = tkfont.Font(
-                root=dialog, family=candidate.font, size=display_size, weight=weight, slant=slant
-            )
-            align = candidate.alignment
-            anchor = {"left": "w", "center": "center", "right": "e"}[align]
-            center_x = 280 + candidate.position_x_fraction * 520
-            x = max(24, min(536, center_x))
-            y = 130 - candidate.position_y_fraction * 240
-            y = max(30, min(230, y))
-            # FCPXML stroke widths are much smaller than Tk pixel widths. Scale
-            # visually so a 0.08 movie-subtitle outline is still visible here.
-            outline_px = max(0, min(5, round(candidate.stroke_width * 12)))
-            sample_text = preview_text_var.get() or "Sample subtitle"
-            if outline_px:
-                for dx, dy in (
-                    (-outline_px, 0),
-                    (outline_px, 0),
-                    (0, -outline_px),
-                    (0, outline_px),
-                    (-outline_px, -outline_px),
-                    (-outline_px, outline_px),
-                    (outline_px, -outline_px),
-                    (outline_px, outline_px),
-                ):
-                    preview.create_text(
-                        x + dx,
-                        y + dy,
-                        text=sample_text,
-                        fill=candidate.stroke_color,
-                        font=display_font,
-                        anchor=anchor,
-                        justify=align,
-                        width=500,
-                    )
-            preview.create_text(
-                x,
-                y,
-                text=sample_text,
-                fill=candidate.font_color,
-                font=display_font,
-                anchor=anchor,
-                justify=align,
-                width=500,
-            )
+            preview.set_title(parsed, preview_text_var.get())
 
         for variable in (
             font_var,
@@ -750,7 +714,7 @@ class SubtitleDavinciApp(tk.Tk):
             variable.trace_add("write", redraw_preview)
 
         buttons = ttk.Frame(body)
-        buttons.grid(row=preview_row + 2, column=0, columnspan=3, sticky="ew", pady=(12, 0))
+        buttons.grid(row=preview_row + 3, column=0, columnspan=3, sticky="ew", pady=(12, 0))
 
         def apply_defaults() -> None:
             default = TitleStyle()
@@ -769,13 +733,12 @@ class SubtitleDavinciApp(tk.Tk):
             if parsed is None:
                 messagebox.showerror(
                     "Invalid title style",
-                    "Check the font size, colors, outline width, and position.",
+                    "Choose an installed font and check the size, colors, outline width, and position.",
                     parent=dialog,
                 )
                 return
-            candidate, _display_size = parsed
-            self.title_style = candidate
-            self.store.set_setting("title_style", candidate.to_json())
+            self.title_style = parsed
+            self.store.set_setting("title_style", parsed.to_json())
             self.store.set_setting("title_style_schema_version", TITLE_STYLE_SCHEMA_VERSION)
             dialog.destroy()
             self.status_var.set("Editable title style saved for future exports.")
@@ -786,8 +749,9 @@ class SubtitleDavinciApp(tk.Tk):
 
         redraw_preview()
         dialog.update_idletasks()
-        width = max(640, dialog.winfo_reqwidth())
-        height = max(720, dialog.winfo_reqheight())
+        width = min(max(680, dialog.winfo_reqwidth()), self.winfo_screenwidth() - 60)
+        height = min(max(720, dialog.winfo_reqheight()), self.winfo_screenheight() - 100)
+        dialog.minsize(min(640, width), min(620, height))
         dialog.geometry(
             centered_geometry(
                 self.winfo_rootx(),
@@ -800,6 +764,20 @@ class SubtitleDavinciApp(tk.Tk):
         )
         dialog.grab_set()
         dialog.focus_set()
+
+    def _title_preview_frame(self) -> tuple[int, int, str]:
+        # The first included result determines the exported sequence format.
+        for index in sorted(self.included):
+            if 0 <= index < len(self.matches):
+                video = self.matches[index].pairing.video_path
+                if video is not None and self.ffprobe_path is not None:
+                    try:
+                        info = probe_media(video, self.ffprobe_path)
+                        return info.width, info.height, "export frame"
+                    except (MediaProbeError, OSError, ValueError):
+                        return 1920, 1080, "reference; media size unavailable"
+                return 1920, 1080, "reference; media size unavailable"
+        return 1920, 1080, "reference; no export selection"
 
     def _refresh_ffprobe_status(self) -> None:
         if self.ffprobe_path is None:
