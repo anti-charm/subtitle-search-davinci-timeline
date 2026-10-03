@@ -1,0 +1,54 @@
+# Python and local tooling
+.venv/
+venv/
+wheel-check/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+build/
+dist/
+*.egg-info/
+htmlcov/
+.coverage*
+
+# Personal state, credentials and diagnostics
+*.sqlite*
+*.db
+*.db-*
+*.log
+.env
+.env.*
+*.pem
+*.key
+*.p12
+*.pfx
+
+# Generated timelines, subtitles and media
+*.fcpxml
+*.xml
+*.xml~
+*.tmp
+*.srt
+!examples/sample.srt
+*.mp4
+*.mov
+*.mkv
+*.avi
+*.webm
+*.m4v
+*.mpg
+*.mpeg
+*.mts
+*.m2ts
+*.wav
+*.mp3
+*.flac
+*.zip
+
+# OS and editor artifacts
+.DS_Store
+Thumbs.db
+Desktop.ini
+.vscode/
+.idea/

@@ -1,0 +1,20 @@
+name: Bug report
+description: Report a reproducible problem using synthetic inputs.
+body:
+  - type: markdown
+    attributes:
+      value: 'Remove private paths, media names, subtitles, exports and diagnostics. Report vulnerabilities through SECURITY.md.'
+  - type: textarea
+    id: problem
+    attributes:
+      label: What happened?
+      description: Include expected behavior and a small invented example.
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: Include app, Python, OS and Resolve versions. Avoid personal paths.
+    validations:
+      required: true

@@ -1,0 +1,7 @@
+include LICENSE README.md PRIVACY.md SECURITY.md CHANGELOG.md CONTRIBUTING.md
+include run_subtitle_search.bat requirements-dev.txt .gitignore .gitattributes
+recursive-include examples README.md sample.srt
+recursive-include tests *.py
+recursive-include tools *.py
+recursive-include .github *.yml *.md
+global-exclude *.pyc *.pyo *.sqlite3 *.db *.log *.fcpxml .env
