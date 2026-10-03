@@ -46,6 +46,7 @@ PUBLIC_FILES = (
     "src/subdav/style.py",
     "src/subdav/title_preview.py",
     "src/subdav/workflow.py",
+    "tests/gui_helpers.py",
     "tests/test_app.py",
     "tests/test_distribution.py",
     "tests/test_fcpxml.py",

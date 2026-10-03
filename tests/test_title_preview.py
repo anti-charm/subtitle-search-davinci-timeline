@@ -6,6 +6,7 @@ from tkinter import ttk
 from types import SimpleNamespace
 
 import pytest
+from gui_helpers import isolated_gui_test
 
 from subdav.app import SubtitleDavinciApp
 from subdav.style import TitleStyle
@@ -48,6 +49,7 @@ def test_preview_rejects_empty_frame_dimensions(dimensions):
 
 
 @pytest.mark.skipif(sys.platform != "win32", reason="Requires a Windows Tk desktop")
+@isolated_gui_test
 def test_preview_preserves_multiline_text_and_scales_when_resized():
     from subdav.title_preview import TitlePreview
 
@@ -70,6 +72,7 @@ def test_preview_preserves_multiline_text_and_scales_when_resized():
 
 
 @pytest.mark.skipif(sys.platform != "win32", reason="Requires a Windows Tk desktop")
+@isolated_gui_test
 def test_preview_uses_first_included_media_dimensions(tmp_path, monkeypatch):
     from pathlib import Path
 
@@ -109,6 +112,7 @@ def widgets(parent):
 
 
 @pytest.mark.skipif(sys.platform != "win32", reason="Requires a Windows Tk desktop")
+@isolated_gui_test
 def test_editor_does_not_wrap_subtitle_lines_or_use_dpi_dependent_font_points(tmp_path):
     app = SubtitleDavinciApp(store_path=tmp_path / "preview.sqlite3")
     app.withdraw()
@@ -130,6 +134,7 @@ def test_editor_does_not_wrap_subtitle_lines_or_use_dpi_dependent_font_points(tm
 
 
 @pytest.mark.skipif(sys.platform != "win32", reason="Requires a Windows Tk desktop")
+@isolated_gui_test
 def test_font_picker_typing_selects_a_family_without_inserting_text():
     from subdav.title_preview import FontPicker
 
@@ -152,6 +157,7 @@ def test_font_picker_typing_selects_a_family_without_inserting_text():
 
 
 @pytest.mark.skipif(sys.platform != "win32", reason="Requires a Windows Tk desktop")
+@isolated_gui_test
 def test_typing_in_posted_font_dropdown_selects_the_matching_family():
     from subdav.title_preview import FontPicker
 
@@ -176,6 +182,7 @@ def test_typing_in_posted_font_dropdown_selects_the_matching_family():
 
 
 @pytest.mark.skipif(sys.platform != "win32", reason="Requires a Windows Tk desktop")
+@isolated_gui_test
 def test_invalid_style_warning_survives_preview_resize(tmp_path):
     app = SubtitleDavinciApp(store_path=tmp_path / "invalid.sqlite3")
     app.withdraw()
