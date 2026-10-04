@@ -71,6 +71,7 @@ _RESOLUTION_RE = re.compile(r"^(?:\d{3,4}p|\d{3,4}x\d{3,4}|4k|uhd)$", re.IGNOREC
 _YEAR_RE = re.compile(r"^(?:19\d{2}|20\d{2})$")
 _SEPARATOR_RE = re.compile(r"[._\-\[\](){}]+")
 _SPACE_RE = re.compile(r"\s+")
+_DOWNLOADED_CLIP_RE = re.compile(r"_match_[0-9]+$", re.IGNORECASE)
 
 
 @dataclass(frozen=True, slots=True)
@@ -78,6 +79,10 @@ class PairSuggestion:
     status: str
     video_path: Path | None
     candidates: tuple[Path, ...] = ()
+
+
+def is_downloaded_clip(path: Path) -> bool:
+    return bool(_DOWNLOADED_CLIP_RE.search(path.stem))
 
 
 def normalize_media_stem(name: str) -> str:
@@ -139,6 +144,13 @@ def suggest_pair(srt_path: Path, videos: Sequence[Path]) -> PairSuggestion:
         if len(same_dir) == 1:
             return PairSuggestion("exact", same_dir[0], tuple(exact))
         return PairSuggestion("ambiguous", None, tuple(exact))
+
+    # Downloaded occurrences have distinct media/timestamp origins. Never
+    # substitute a similar clip for a missing exact file, or use an orphan
+    # extracted video as a fuzzy match for an original full-length SRT.
+    if is_downloaded_clip(srt_path):
+        return PairSuggestion("unresolved", None, ())
+    videos = tuple(v for v in videos if not is_downloaded_clip(v))
 
     target = normalize_media_stem(srt_path.stem)
     normalized = [v for v in videos if normalize_media_stem(v.stem) == target and target]

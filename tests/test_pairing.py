@@ -91,3 +91,52 @@ def test_movie_pairing_ignores_subtitle_language_year_and_release_group(tmp_path
 
 def test_movie_title_that_is_only_a_year_is_not_erased():
     assert normalize_media_stem("1917") == "1917"
+
+
+def test_downloaded_clip_requires_its_exact_video_not_a_similar_clip(tmp_path):
+    srt = tmp_path / "Example show_match_001.srt"
+    similar = tmp_path / "Example show_1080p_match_001.mp4"
+
+    result = suggest_pair(srt, [similar])
+
+    assert result.status == "unresolved"
+    assert result.video_path is None
+
+
+def test_downloaded_clip_duplicate_names_prefer_own_folder_or_stay_ambiguous(tmp_path):
+    srt = tmp_path / "clips" / "Example_match_001.srt"
+    local = srt.with_suffix(".mp4")
+    other = tmp_path / "other" / local.name
+    third = tmp_path / "third" / local.name
+
+    assert suggest_pair(srt, [other, local]).video_path == local
+    result = suggest_pair(srt, [other, third])
+    assert result.status == "ambiguous"
+    assert result.video_path is None
+
+
+def test_clip_scan_excludes_originals_and_rescans_new_outputs(tmp_path):
+    original = tmp_path / "Example.en-orig.srt"
+    original.write_text("", encoding="utf-8")
+    clips = tmp_path / "clips"
+    clips.mkdir()
+    first = clips / "Example_match_001.srt"
+    first.write_text("", encoding="utf-8")
+    first.with_suffix(".MP4").write_bytes(b"")
+    # An orphan video must not be substituted for the missing second video.
+    (clips / "Example_match_003.mp4").write_bytes(b"")
+    missing = clips / "Example_match_002.srt"
+    missing.write_text("", encoding="utf-8")
+
+    scan = scan_library(tmp_path, downloaded_clips_only=True)
+    assert [p.name for p in scan.subtitles] == ["Example_match_001.srt", "Example_match_002.srt"]
+    assert suggest_pair(first, scan.videos).status == "exact"
+    assert suggest_pair(missing, scan.videos).status == "unresolved"
+
+    late = clips / "Example_match_003.srt"
+    late.write_text("", encoding="utf-8")
+    assert late not in scan.subtitles
+    refreshed = scan_library(tmp_path, downloaded_clips_only=True)
+    assert late in refreshed.subtitles
+    assert suggest_pair(late, refreshed.videos).status == "exact"
+    assert original in scan_library(tmp_path).subtitles

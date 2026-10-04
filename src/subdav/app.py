@@ -13,6 +13,7 @@ from .library import VIDEO_EXTENSIONS, LibraryScan, scan_library
 from .media import MediaProbeError, find_ffprobe, launch_ffmpeg_installer, probe_media
 from .store import PairingStore
 from .style import TitleStyle
+from .table_sorting import TableSorter
 from .title_preview import FontPicker, TitlePreview
 from .workflow import (
     ResolvedPair,
@@ -159,6 +160,7 @@ class SubtitleDavinciApp(tk.Tk):
         self.included: set[int] = set()
 
         self.folder_var = tk.StringVar()
+        self.clips_only_var = tk.BooleanVar(value=False)
         self.query_var = tk.StringVar()
         self.case_var = tk.BooleanVar(value=False)
         self.whole_var = tk.BooleanVar(value=False)
@@ -186,10 +188,25 @@ class SubtitleDavinciApp(tk.Tk):
         ttk.Button(folder, text="Browse...", command=self.choose_folder).grid(
             row=0, column=1, padx=3
         )
-        ttk.Button(folder, text="Scan", command=self.scan_folder).grid(row=0, column=2, padx=3)
+        ttk.Button(folder, text="Scan / Refresh", command=self.scan_folder).grid(
+            row=0, column=2, padx=3
+        )
+
+        sources = ttk.Frame(folder)
+        sources.grid(row=1, column=0, columnspan=3, sticky="ew", pady=(6, 0))
+        ttk.Checkbutton(
+            sources,
+            text="Downloaded clips only",
+            variable=self.clips_only_var,
+            command=self._library_mode_changed,
+        ).pack(side="left")
+        ttk.Label(
+            sources,
+            text="Choose the clips output folder or a common parent; refresh after downloads.",
+        ).pack(side="left", padx=(12, 0))
 
         ffmpeg = ttk.Frame(folder)
-        ffmpeg.grid(row=1, column=0, columnspan=3, sticky="ew", pady=(7, 0))
+        ffmpeg.grid(row=2, column=0, columnspan=3, sticky="ew", pady=(7, 0))
         ffmpeg.columnconfigure(1, weight=1)
         ttk.Label(ffmpeg, text="FFmpeg / ffprobe:").grid(row=0, column=0, sticky="w")
         ttk.Label(ffmpeg, textvariable=self.ffprobe_var).grid(
@@ -215,6 +232,7 @@ class SubtitleDavinciApp(tk.Tk):
         ttk.Button(pair_controls, text="Clear SRT", command=self.clear_subtitle_selection).pack(
             side="left", padx=3
         )
+        ttk.Label(pair_controls, text="Click headings to sort").pack(side="left", padx=12)
         ttk.Button(pair_controls, text="Pair selected...", command=self.manual_pair_selected).pack(
             side="right", padx=3
         )
@@ -236,6 +254,7 @@ class SubtitleDavinciApp(tk.Tk):
         self.pair_tree.heading("subtitle", text="Subtitle")
         self.pair_tree.heading("status", text="Pairing")
         self.pair_tree.heading("video", text="Video")
+        self.pair_sorter = TableSorter(self.pair_tree)
         self.pair_tree.column("use", width=52, anchor="center", stretch=False)
         self.pair_tree.column("subtitle", width=280, anchor="w")
         self.pair_tree.column("status", width=110, anchor="center")
@@ -280,6 +299,7 @@ class SubtitleDavinciApp(tk.Tk):
         }
         for key, title in headings.items():
             self.result_tree.heading(key, text=title)
+        self.result_sorter = TableSorter(self.result_tree)
         self.result_tree.column("use", width=45, anchor="center", stretch=False)
         self.result_tree.column("subtitle", width=170, anchor="w")
         self.result_tree.column("start", width=105, anchor="center", stretch=False)
@@ -847,6 +867,10 @@ class SubtitleDavinciApp(tk.Tk):
             self.folder_var.set(chosen)
             self.scan_folder()
 
+    def _library_mode_changed(self) -> None:
+        if self.folder_var.get().strip():
+            self.scan_folder()
+
     def scan_folder(self) -> None:
         folder = self.folder_var.get().strip()
         if not folder:
@@ -854,12 +878,13 @@ class SubtitleDavinciApp(tk.Tk):
             return
         self.scan = None
         self.pairs = {}
+        self.enabled_subtitles.clear()
         self.matches = []
         self.included.clear()
         self._refresh_pair_tree()
         self._refresh_result_tree()
         try:
-            self.scan = scan_library(Path(folder))
+            self.scan = scan_library(Path(folder), downloaded_clips_only=self.clips_only_var.get())
             self.pairs = resolve_pairs(self.scan, self.store)
         except (OSError, ValueError, sqlite3.Error) as exc:
             self.scan = None
@@ -871,11 +896,23 @@ class SubtitleDavinciApp(tk.Tk):
         self.matches = []
         self.included.clear()
         self._refresh_result_tree()
-        self.status_var.set(
-            f"Found {len(self.scan.subtitles)} subtitle files and {len(self.scan.videos)} videos."
-        )
+        if self.clips_only_var.get() and not self.scan.subtitles:
+            self.status_var.set(
+                "No _match_NNN.srt files found. Choose the clips output folder "
+                "or a common parent, then Scan / Refresh."
+            )
+        else:
+            unresolved = sum(pair.video_path is None for pair in self.pairs.values())
+            suffix = f"; {unresolved} need video pairing" if unresolved else ""
+            self.status_var.set(
+                f"Found {len(self.scan.subtitles)} subtitle files and "
+                f"{len(self.scan.videos)} videos{suffix}. Click a column heading to sort."
+            )
 
     def _refresh_pair_tree(self) -> None:
+        selected = self.pair_tree.selection()
+        focus = self.pair_tree.focus()
+        scroll = self.pair_tree.yview()[0]
         self.pair_tree.delete(*self.pair_tree.get_children())
         if self.scan is None:
             return
@@ -894,6 +931,7 @@ class SubtitleDavinciApp(tk.Tk):
                     video,
                 ),
             )
+        self.pair_sorter.restore(selected, focus, scroll)
 
     def _subtitle_filter_changed(self) -> None:
         self._refresh_pair_tree()
@@ -1016,6 +1054,9 @@ class SubtitleDavinciApp(tk.Tk):
         self.status_var.set(f"{len(self.matches)} matching subtitle entries{suffix}.")
 
     def _refresh_result_tree(self) -> None:
+        selected = self.result_tree.selection()
+        focus = self.result_tree.focus()
+        scroll = self.result_tree.yview()[0]
         self.result_tree.delete(*self.result_tree.get_children())
         for idx, match in enumerate(self.matches):
             video = match.pairing.video_path.name if match.pairing.video_path else "—"
@@ -1034,9 +1075,12 @@ class SubtitleDavinciApp(tk.Tk):
                     match.pairing.status,
                 ),
             )
+        self.result_sorter.restore(selected, focus, scroll)
 
     def toggle_result(self, event=None) -> None:
         item = self.result_tree.identify_row(event.y) if event is not None else None
+        if event is not None and not item:
+            return
         if not item:
             selected = self.result_tree.selection()
             item = selected[0] if selected else None
