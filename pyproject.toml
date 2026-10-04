@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "subdav"
-version = "0.2.1"
+version = "0.2.2"
 description = "Search SRT subtitles and export matching clips as a DaVinci Resolve FCPXML timeline"
 requires-python = ">=3.11"
 readme = "README.md"

@@ -7,7 +7,7 @@ and assemble them into an editable DaVinci Resolve timeline. Original videos and
 subtitles stay in place. No accounts, cloud processing, telemetry, or third-party
 Python runtime packages.
 
-**[Download v0.2.1](https://github.com/anti-charm/subtitle-search-davinci-timeline/releases/tag/v0.2.1)**
+**[Download v0.2.2](https://github.com/anti-charm/subtitle-search-davinci-timeline/releases/tag/v0.2.2)**
 | [Privacy](PRIVACY.md) | [Security](SECURITY.md) | [Changelog](CHANGELOG.md)
 
 > **Sharing warning:** Exported FCPXML includes absolute media paths, filenames,
@@ -16,7 +16,7 @@ Python runtime packages.
 
 ## Start on Windows
 
-1. Download `subdav-0.2.1-source.zip` from the release and extract the whole ZIP
+1. Download `subdav-0.2.2-source.zip` from the release and extract the whole ZIP
    into a writable folder. Keep `src`, `examples`, and the launcher together.
 2. Install [Python 3.11 or newer](https://www.python.org/downloads/windows/)
    using its normal Windows installer with Tcl/Tk enabled. Ensure `py` or `python`
@@ -98,6 +98,38 @@ media with consistent frame rates and verify mixed-rate compilations in Resolve.
 
 ## Pairing and supported files
 
+Both tables support column sorting: click a heading once to sort, and again to
+reverse it. **Pairing** puts `unresolved`, then `ambiguous`, rows first, followed
+by normalized, exact and manual pairs. Time columns sort numerically. Sorting
+keeps SRT/result checkboxes and the selected row attached to the same item;
+it changes the display order and preserves the existing timeline export order.
+
+### Downloaded clips
+
+For a downloader that creates `Example_match_001.srt` +
+`Example_match_001.mp4`, select its **clips output folder** (or a common parent
+containing both originals and clips), enable **Downloaded clips only**, and
+press **Scan / Refresh**. This mode searches only `_match_NNN.srt` files and
+leaves the original full-length SRTs out of the results. A source with five
+extracted occurrences becomes five independent SRT/video pairs. The clip's
+filename, subtitle text and local timestamps remain available in the results
+and exported timeline.
+
+The originals folder can be a sibling of the clips folder. Scanning the originals
+folder alone cannot discover files in its sibling: select the clips folder or
+their common parent. Refresh after downloads finish; folder changes are not
+watched automatically. Newly generated pairs appear without restarting the app.
+
+Automatic pairing of extracted clips requires an exact basename. A missing
+video stays unresolved; an orphan video is never substituted for another hit.
+Duplicate basenames prefer an exact video in the SRT's directory; otherwise
+multiple candidates remain ambiguous for manual review. Manual pairing remains
+available. Use the clip's SRT with timestamps relative to that clip, not the
+original SRT's long-video timestamps. The exporter rejects ranges past the end
+of the chosen video and references media without modifying or re-encoding it.
+
+### Ordinary subtitle libraries
+
 Matching tries exact basenames, normalized names, conservative similarity, then
 manual resolution. Known language/release metadata can be removed, but numeric
 episode/title conflicts are rejected before fuzzy matching. Several plausible
@@ -130,7 +162,8 @@ Keep exports, databases, diagnostics and personal screenshots out of public issu
 | Launcher cannot find Python | Install Python 3.11+ with Tcl/Tk, then reopen the launcher |
 | Tkinter is missing | Repair the official Python installation and enable Tcl/Tk |
 | FFprobe is missing | Auto-detect, locate a trusted executable, or confirm the optional installer |
-| Pairing is unresolved | Pair the selected SRT manually and check the actual video edit |
+| Pairing is unresolved | Check the scanned folder, refresh after downloads, click Pairing to bring problem rows first, then pair manually if needed |
+| Originals show instead of downloaded clips | Select the clips output folder or common parent and enable Downloaded clips only |
 | Subtitle parsing fails | Repair its index/timestamp/encoding; timestamps use minutes/seconds below 60 |
 | Export fails or times out | Check file access and valid metadata; use local media and an updated ffprobe |
 | Resolve cannot locate media | Restore the original paths or relink media during import |

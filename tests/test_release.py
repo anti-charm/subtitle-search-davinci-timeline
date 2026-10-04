@@ -34,7 +34,10 @@ def test_source_zip_excludes_unapproved_local_artifacts(tmp_path):
     with ZipFile(archive) as z:
         names = z.namelist()
         assert len(names) == len(release.PUBLIC_FILES)
-        assert all(name.removeprefix("subdav-0.2.1/") in release.PUBLIC_FILES for name in names)
+        assert all(
+            name.removeprefix(f"subdav-{release.VERSION}/") in release.PUBLIC_FILES
+            for name in names
+        )
         assert not any("private" in name or name.endswith(".pyc") for name in names)
 
 

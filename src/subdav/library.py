@@ -3,6 +3,8 @@ from __future__ import annotations
 from dataclasses import dataclass
 from pathlib import Path
 
+from .pairing import is_downloaded_clip
+
 VIDEO_EXTENSIONS = {
     ".mp4",
     ".mkv",
@@ -24,7 +26,7 @@ class LibraryScan:
     videos: tuple[Path, ...]
 
 
-def scan_library(root: Path) -> LibraryScan:
+def scan_library(root: Path, *, downloaded_clips_only: bool = False) -> LibraryScan:
     root = Path(root).expanduser().resolve()
     if not root.is_dir():
         raise NotADirectoryError(root)
@@ -36,7 +38,8 @@ def scan_library(root: Path) -> LibraryScan:
             continue
         suffix = path.suffix.casefold()
         if suffix == ".srt":
-            subtitles.append(path)
+            if not downloaded_clips_only or is_downloaded_clip(path):
+                subtitles.append(path)
         elif suffix in VIDEO_EXTENSIONS:
             videos.append(path)
 

@@ -1,6 +1,16 @@
 # Changelog
 
-## Unreleased
+## 0.2.2 - 2026-10-04
+
+- Add a downloaded-clips-only scan mode for independent `_match_NNN.srt`/video
+  occurrences. Exclude original full-length SRTs in this mode and retain each
+  clip's own subtitle text, filename and local timestamp range for export.
+- Require exact names for automatic downloaded-clip pairing. Missing clips stay
+  unresolved; duplicate names prefer the same directory or remain ambiguous.
+- Label the scan action **Scan / Refresh** and explain which folder to select.
+- Make every column heading sortable in both tables. Pairing sorts unresolved
+  and ambiguous rows first; time columns sort numerically. Preserve selections,
+  row identities and export order while sorting and refreshing table rows.
 
 - Run each Windows GUI test in a fresh process to isolate Tcl/Tk startup state.
   Preserve all GUI assertions and report child-process failures to CI.

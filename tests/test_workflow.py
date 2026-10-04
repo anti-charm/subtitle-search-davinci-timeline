@@ -130,3 +130,33 @@ def test_search_library_can_limit_search_to_enabled_srt_files(tmp_path: Path):
     )
 
     assert [match.entry.srt_path.name for match in matches] == ["First.srt"]
+
+
+def test_each_downloaded_occurrence_exports_its_own_clip_and_local_range(tmp_path):
+    original = tmp_path / "Example.en-orig.srt"
+    write_srt(original, "1\n01:00:00,000 --> 01:00:01,000\nexample phrase\n")
+    for n in range(1, 6):
+        srt = tmp_path / f"Example_match_{n:03d}.srt"
+        write_srt(srt, "1\n00:00:05,000 --> 00:00:06,000\nexample phrase\n")
+        srt.with_suffix(".mp4").write_bytes(b"")
+    scan = scan_library(tmp_path, downloaded_clips_only=True)
+    pairs = resolve_pairs(scan, PairingStore(tmp_path / "state.sqlite3"))
+    matches = search_library(scan, pairs, "example")
+    output = tmp_path / "downloaded.fcpxml"
+    export_matches(matches, output, "Downloaded", probe_func=fake_probe, include_titles=True)
+
+    root = ET.parse(output).getroot()
+    assets = {a.attrib["id"]: a for a in root.findall("./resources/asset")}
+    nodes = root.findall("./library/event/project/sequence/spine/asset-clip")
+    assert len(nodes) == len(assets) == 5
+    assert [assets[n.attrib["ref"]].attrib["name"] for n in nodes] == [
+        "Example_match_001.mp4",
+        "Example_match_002.mp4",
+        "Example_match_003.mp4",
+        "Example_match_004.mp4",
+        "Example_match_005.mp4",
+    ]
+    assert all(n.attrib["start"] == "5s" and n.attrib["duration"] == "1s" for n in nodes)
+    assert all(n.find("./title/text/text-style").text == "example phrase" for n in nodes)
+    assert all(m.pairing.status == "exact" for m in matches)
+    assert original not in [m.entry.srt_path for m in matches]
